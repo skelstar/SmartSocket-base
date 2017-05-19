@@ -19,7 +19,7 @@ MyWifiHelper wifiHelper(WIFI_HOSTNAME);
 
 //--------------------------------------------------------------------------------
 void button_callback(int eventCode, int eventParam);
-myPushButton button(BUTTON, false, 3000, HIGH, button_callback);
+myPushButton button(BUTTON, true, 3000, HIGH, button_callback);
 
 void button_callback(int eventCode, int eventParam) {
     switch (eventParam) {
@@ -30,8 +30,10 @@ void button_callback(int eventCode, int eventParam) {
             Serial.println("EV_HELD_FOR_LONG_ENOUGH");
             break;
         case button.EV_RELEASED:
+            Serial.println("EV_RELEASED");
+            break;
         case button.EV_RELEASED_FROM_HELD_TIME:
-            Serial.println("EV_RELEASED OR EV_RELEASED_FROM_HELD_TIME");
+            Serial.println("EV_RELEASED_FROM_HELD_TIME");
             break;
         default:    
             break;
