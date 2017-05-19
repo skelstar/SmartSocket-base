@@ -13,8 +13,13 @@ char versionText[] = "SmartSocket-base v0.9";
 #define LED_ON          LOW
 #define LED_OFF         HIGH
 
+#define ON 				1
+#define OFF 			0
+
+#define 	TOPIC_ONLINE	"/smartsocket-base/online"
 #define     TOPIC_EVENT     "/smartsocket-base/event"
 #define     TOPIC_COMMAND   "/smartsocket-base/command"
+#define		TOPIC_TIMESTAMP	"/dev/timestamp"
 
 
 #define     EVENT_BUTTON_PUSHED     "button pushed"
@@ -50,6 +55,11 @@ void button_callback(int eventCode, int eventParam) {
     }
 }
 //--------------------------------------------------------------------------------
+
+void mqttcallback_timestamp(byte* payload, unsigned int length) {
+	wifiHelper.mqttPublish(TOPIC_ONLINE, "1");
+}
+
 void mqttcallback_Command(byte *payload, unsigned int length) {
 
     const char* command = wifiHelper.mqttGetJsonCommand(payload);
@@ -60,10 +70,19 @@ void mqttcallback_Command(byte *payload, unsigned int length) {
 
     if (strcmp(command, "LED") == 0) {
         if (strcmp(value, "ON") == 0) {
-            digitalWrite(BLUE_LED, LOW);
+            turnBlueLed(ON);
         }
         else if (strcmp(value, "OFF") == 0) {
-            digitalWrite(BLUE_LED, HIGH);
+            turnBlueLed(OFF);
+        }
+    }
+
+    if (strcmp(command, "RELAY") == 0) {
+        if (strcmp(value, "ON") == 0) {
+            turnRelay(ON);
+        }
+        else if (strcmp(value, "OFF") == 0) {
+            turnRelay(OFF);
         }
     }
 }
@@ -78,14 +97,17 @@ void setup() {
     Serial.println(versionText);
 
     pinMode(BLUE_LED, OUTPUT);
-    digitalWrite(BLUE_LED, HIGH);
+    turnBlueLed(OFF);
 
+    pinMode(RELAY_REDLED, OUTPUT);
+    turnRelay(OFF);
 
     wifiHelper.setupWifi();
     wifiHelper.setupOTA(WIFI_HOSTNAME);
     wifiHelper.setupMqtt();
 
-    wifiHelper.mqttAddSubscription(TOPIC_COMMAND, mqttcallback_Command);
+    wifiHelper.mqttAddSubscription(TOPIC_TIMESTAMP, mqttcallback_timestamp);
+	wifiHelper.mqttAddSubscription(TOPIC_COMMAND, mqttcallback_Command);
 }
 
 /* ----------------------------------------------------------- */
@@ -99,4 +121,14 @@ void loop() {
     button.serviceEvents();
 
     delay(10);
+}
+
+//--------------------------------------------------------------------------------
+
+void turnRelay(int onoff) {
+	digitalWrite(RELAY_REDLED, onoff == ON ? HIGH : LOW);
+}
+
+void turnBlueLed(int onoff) {
+	digitalWrite(BLUE_LED, onoff == ON ? LOW : HIGH);
 }
