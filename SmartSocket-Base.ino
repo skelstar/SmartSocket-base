@@ -3,7 +3,7 @@
 #include <myPushButton.h>
 #include <ArduinoJson.h>            // https://github.com/bblanchon/ArduinoJson
 
-char versionText[] = "SmartSocket-base v0.9";
+char versionText[] = "SmartSocket-base v1.1";
 
 /* ----------------------------------------------------------- */
 
@@ -16,9 +16,10 @@ char versionText[] = "SmartSocket-base v0.9";
 #define ON 				1
 #define OFF 			0
 
-#define 	TOPIC_ONLINE	"/smartsocket-base/online"
-#define     TOPIC_EVENT     "/smartsocket-base/event"
-#define     TOPIC_COMMAND   "/smartsocket-base/command"
+#define     WIFI_HOSTNAME 	"/device/smartsocket/SMTSKT01"
+#define 	TOPIC_ONLINE	"/device/smartsocket/SMTSKT01/online"
+#define     TOPIC_EVENT     "/device/smartsocket/SMTSKT01/event"
+#define     TOPIC_COMMAND   "/device/smartsocket/SMTSKT01/command"
 #define		TOPIC_TIMESTAMP	"/dev/timestamp"
 
 
@@ -26,29 +27,35 @@ char versionText[] = "SmartSocket-base v0.9";
 #define     EVENT_BUTTON_HELD       "button held"
 
 /* ----------------------------------------------------------- */
-#define     WIFI_HOSTNAME "SmartSocket-base"
 
 MyWifiHelper wifiHelper(WIFI_HOSTNAME);
 
 //--------------------------------------------------------------------------------
-void button_callback(int eventCode, int eventParam);
-myPushButton button(BUTTON, true, 3000, HIGH, button_callback);
+void button_callback( int eventCode, int eventPin, int eventParam );
 
-void button_callback(int eventCode, int eventParam) {
-    switch (eventParam) {
+#define 	PULLUP	true
+#define 	OFF_STATE_HIGH	1
+myPushButton button(BUTTON, PULLUP, OFF_STATE_HIGH, button_callback);
+
+void button_callback( int eventCode, int eventPin, int eventParam ) {
+
+	char payload1[20];
+	char numSecsBuff[3];
+
+    switch (eventCode) {
         case button.EV_BUTTON_PRESSED:
             Serial.println("EV_BUTTON_PRESSED");
-            break;
-        case button.EV_HELD_FOR_LONG_ENOUGH:
-            Serial.println("EV_HELD_FOR_LONG_ENOUGH");
-            wifiHelper.mqttPublish(TOPIC_EVENT, EVENT_BUTTON_HELD);
             break;
         case button.EV_RELEASED:
             Serial.println("EV_RELEASED");
             wifiHelper.mqttPublish(TOPIC_EVENT, EVENT_BUTTON_PUSHED);
             break;
-        case button.EV_RELEASED_FROM_HELD_TIME:
-            Serial.println("EV_RELEASED_FROM_HELD_TIME");
+		case button.EV_HELD_SECONDS:
+		 	strcpy(payload1, "EV_HELD_SECONDS_");
+		 	itoa(eventParam, numSecsBuff, 10);
+		 	strcat(payload1, numSecsBuff);
+		 	puts(payload1);
+		 	wifiHelper.mqttPublish(TOPIC_EVENT, payload1);
             break;
         default:    
             break;
@@ -62,22 +69,24 @@ void mqttcallback_timestamp(byte* payload, unsigned int length) {
 
 void mqttcallback_Command(byte *payload, unsigned int length) {
 
-    const char* command = wifiHelper.mqttGetJsonCommand(payload);
-    const char* value = wifiHelper.mqttGetJsonCommandValue();
+	payload[length] = '\0';
+	Serial.println((char*) payload);
+	
+	const char d[2] = "$";
+	char* command = strtok((char*)payload, d);
 
-    // Serial.print("command: "); Serial.println(command);
-    // Serial.print("value: "); Serial.println(value);
-
-    if (strcmp(command, "LED") == 0) {
-        if (strcmp(value, "ON") == 0) {
-            turnBlueLed(ON);
-        }
-        else if (strcmp(value, "OFF") == 0) {
-            turnBlueLed(OFF);
-        }
-    }
+	if (strcmp(command, "LED") == 0) {
+		char* value = strtok(NULL, d);
+		if (strcmp(value, "ON") == 0) {
+			turnBlueLed(ON);
+		}
+		else if (strcmp(value, "OFF") == 0) {
+			turnBlueLed(OFF);
+		}
+	}
 
     if (strcmp(command, "RELAY") == 0) {
+		char* value = strtok(NULL, d);
         if (strcmp(value, "ON") == 0) {
             turnRelay(ON);
         }
