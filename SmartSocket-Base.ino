@@ -16,10 +16,10 @@ char versionText[] = "SmartSocket-base v1.1";
 #define ON 				1
 #define OFF 			0
 
-#define     WIFI_HOSTNAME 	"/device/smartsocket/SMTSKT01"
-#define 	TOPIC_ONLINE	"/device/smartsocket/SMTSKT01/online"
-#define     TOPIC_EVENT     "/device/smartsocket/SMTSKT01/event"
-#define     TOPIC_COMMAND   "/device/smartsocket/SMTSKT01/command"
+#define     WIFI_HOSTNAME 	"/device/smartsocket/SMTSKT02"
+#define 	TOPIC_ONLINE	"/device/smartsocket/SMTSKT02/online"
+#define     TOPIC_EVENT     "/device/smartsocket/SMTSKT02/event"
+#define     TOPIC_COMMAND   "/device/smartsocket/SMTSKT02/command"
 #define		TOPIC_TIMESTAMP	"/dev/timestamp"
 
 
@@ -48,13 +48,14 @@ void button_callback( int eventCode, int eventPin, int eventParam ) {
             break;
         case button.EV_RELEASED:
             Serial.println("EV_RELEASED");
-            wifiHelper.mqttPublish(TOPIC_EVENT, EVENT_BUTTON_PUSHED);
+            wifiHelper.mqttPublish(TOPIC_EVENT, "EV_RELEASED");
             break;
 		case button.EV_HELD_SECONDS:
 		 	strcpy(payload1, "EV_HELD_SECONDS_");
 		 	itoa(eventParam, numSecsBuff, 10);
 		 	strcat(payload1, numSecsBuff);
 		 	puts(payload1);
+            Serial.println(payload1);
 		 	wifiHelper.mqttPublish(TOPIC_EVENT, payload1);
             break;
         default:    
@@ -62,38 +63,44 @@ void button_callback( int eventCode, int eventPin, int eventParam ) {
     }
 }
 //--------------------------------------------------------------------------------
+int onlineCounter = 0;
+char buff[4];
 
 void mqttcallback_timestamp(byte* payload, unsigned int length) {
-	wifiHelper.mqttPublish(TOPIC_ONLINE, "1");
+	wifiHelper.mqttPublish(TOPIC_ONLINE, itoa(onlineCounter, buff, 10));
+	if (onlineCounter < 500)
+		onlineCounter++;
 }
 
 void mqttcallback_Command(byte *payload, unsigned int length) {
 
 	payload[length] = '\0';
-	Serial.println((char*) payload);
+	//Serial.println((char*) payload);
 	
 	const char d[2] = "$";
-	char* command = strtok((char*)payload, d);
+	char* command;	// = strtok((char*)payload, d);
+	char* p = (char*)payload;
 
-	if (strcmp(command, "LED") == 0) {
-		char* value = strtok(NULL, d);
-		if (strcmp(value, "ON") == 0) {
-			turnBlueLed(ON);
+	while ((command = strtok_r(p, "$", &p)) != NULL) {
+		if (strcmp(command, "LED") == 0) {
+			char* value = strtok_r(p, "$", &p);
+			if (strcmp(value, "ON") == 0) {
+				turnBlueLed(ON);
+			}
+			else if (strcmp(value, "OFF") == 0) {
+				turnBlueLed(OFF);
+			}			
 		}
-		else if (strcmp(value, "OFF") == 0) {
-			turnBlueLed(OFF);
+		else if (strcmp(command, "RELAY") == 0) {
+			char* value = strtok_r(p, "$", &p);
+			if (strcmp(value, "ON") == 0) {
+				turnRelay(ON);
+			}
+			else if (strcmp(value, "OFF") == 0) {
+				turnRelay(OFF);
+			}
 		}
 	}
-
-    if (strcmp(command, "RELAY") == 0) {
-		char* value = strtok(NULL, d);
-        if (strcmp(value, "ON") == 0) {
-            turnRelay(ON);
-        }
-        else if (strcmp(value, "OFF") == 0) {
-            turnRelay(OFF);
-        }
-    }
 }
 
 //--------------------------------------------------------------------------------
