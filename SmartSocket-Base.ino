@@ -16,15 +16,10 @@ char versionText[] = "SmartSocket-base v1.1";
 #define ON 				1
 #define OFF 			0
 
-#define     WIFI_HOSTNAME 	"/device/smartsocket/SMTSKT02"
-#define 	TOPIC_ONLINE	"/device/smartsocket/SMTSKT02/online"
-#define     TOPIC_EVENT     "/device/smartsocket/SMTSKT02/event"
-#define     TOPIC_COMMAND   "/device/smartsocket/SMTSKT02/command"
+#define     WIFI_HOSTNAME 	"/device/smartsocket/SMTSKT04"
+#define     TOPIC_EVENT     "/device/smartsocket/SMTSKT04/event"
+#define     TOPIC_COMMAND   "/device/smartsocket/SMTSKT04/command"
 #define		TOPIC_TIMESTAMP	"/dev/timestamp"
-
-
-#define     EVENT_BUTTON_PUSHED     "button pushed"
-#define     EVENT_BUTTON_HELD       "button held"
 
 /* ----------------------------------------------------------- */
 
@@ -67,7 +62,11 @@ int onlineCounter = 0;
 char buff[4];
 
 void mqttcallback_timestamp(byte* payload, unsigned int length) {
-	wifiHelper.mqttPublish(TOPIC_ONLINE, itoa(onlineCounter, buff, 10));
+	
+	#define ONLINE_MESSAGE	"ONLINE-%02ds"
+	char onlineMsg[11];
+	sprintf(onlineMsg, ONLINE_MESSAGE, onlineCounter);
+	wifiHelper.mqttPublishWithId(TOPIC_EVENT, onlineMsg);
 	if (onlineCounter < 500)
 		onlineCounter++;
 }
@@ -124,19 +123,23 @@ void setup() {
 
     wifiHelper.mqttAddSubscription(TOPIC_TIMESTAMP, mqttcallback_timestamp);
 	wifiHelper.mqttAddSubscription(TOPIC_COMMAND, mqttcallback_Command);
+
+	wifiHelper.loopMqtt();
+	wifiHelper.mqttPublish(TOPIC_EVENT, "BOOT");
+	wifiHelper.loopMqtt();
 }
 
 /* ----------------------------------------------------------- */
 
 void loop() {
 
-    ArduinoOTA.handle();
+	ArduinoOTA.handle();
 
-    wifiHelper.loopMqtt();
+	wifiHelper.loopMqtt();
 
-    button.serviceEvents();
+	button.serviceEvents();
 
-    delay(10);
+	delay(10);
 }
 
 //--------------------------------------------------------------------------------
