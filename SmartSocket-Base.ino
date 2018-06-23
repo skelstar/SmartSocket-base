@@ -16,9 +16,10 @@ char versionText[] = "SmartSocket-base v1.1";
 #define ON 				1
 #define OFF 			0
 
-#define     WIFI_HOSTNAME 	"/device/smartsocket/SMTSKT04"
-#define     TOPIC_EVENT     "/device/smartsocket/SMTSKT04/event"
-#define     TOPIC_COMMAND   "/device/smartsocket/SMTSKT04/command"
+#define     WIFI_HOSTNAME 	"/device/smartsocket/SMTSKT07"
+#define     TOPIC_EVENT     "/device/smartsocket/SMTSKT07/event"
+#define     TOPIC_ONLINE    "/device/smartsocket/SMTSKT07/online"
+#define     TOPIC_COMMAND   "/device/smartsocket/SMTSKT07/command"
 #define		TOPIC_TIMESTAMP	"/dev/timestamp"
 
 /* ----------------------------------------------------------- */
@@ -66,7 +67,7 @@ void mqttcallback_timestamp(byte* payload, unsigned int length) {
 	#define ONLINE_MESSAGE	"ONLINE-%02ds"
 	char onlineMsg[11];
 	sprintf(onlineMsg, ONLINE_MESSAGE, onlineCounter);
-	wifiHelper.mqttPublishWithId(TOPIC_EVENT, onlineMsg);
+	wifiHelper.mqttPublish(TOPIC_ONLINE, onlineMsg);
 	if (onlineCounter < 500)
 		onlineCounter++;
 }
