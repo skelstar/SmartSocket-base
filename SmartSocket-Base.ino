@@ -16,22 +16,26 @@ char versionText[] = "SmartSocket-base v1.1";
 #define ON 				1
 #define OFF 			0
 
-#define     WIFI_HOSTNAME 	"/device/smartsocket/SMTSKT07"
-#define     TOPIC_EVENT     "/device/smartsocket/SMTSKT07/event"
-#define     TOPIC_ONLINE    "/device/smartsocket/SMTSKT07/online"
-#define     TOPIC_COMMAND   "/device/smartsocket/SMTSKT07/command"
+#define     WIFI_HOSTNAME 	"/device/smartsocket/SMTSKT04"
+#define     TOPIC_EVENT     "/device/smartsocket/SMTSKT04/event"
+#define     TOPIC_ONLINE    "/device/smartsocket/SMTSKT04/online"
+#define     TOPIC_COMMAND   "/device/smartsocket/SMTSKT04/command"
 #define		TOPIC_TIMESTAMP	"/dev/timestamp"
 
 /* ----------------------------------------------------------- */
 
 MyWifiHelper wifiHelper(WIFI_HOSTNAME);
 
+
+void turnRelay(int onoff);
+void turnBlueLed(int onoff);
+
 //--------------------------------------------------------------------------------
 void button_callback( int eventCode, int eventPin, int eventParam );
 
 #define 	PULLUP	true
 #define 	OFF_STATE_HIGH	1
-myPushButton button(BUTTON, PULLUP, OFF_STATE_HIGH, button_callback);
+myPushButton button(BUTTON, PULLUP, OFF_STATE_HIGH, button_callback, 500);
 
 void button_callback( int eventCode, int eventPin, int eventParam ) {
 
@@ -42,6 +46,10 @@ void button_callback( int eventCode, int eventPin, int eventParam ) {
         case button.EV_BUTTON_PRESSED:
             Serial.println("EV_BUTTON_PRESSED");
             break;
+        case button.EV_SPECFIC_TIME_REACHED:
+        	Serial.println("EV_SPECFIC_TIME_REACHED");
+		 	wifiHelper.mqttPublish(TOPIC_EVENT, "EV_SPECFIC_TIME_REACHED");
+        	break;
         case button.EV_RELEASED:
             Serial.println("EV_RELEASED");
             wifiHelper.mqttPublish(TOPIC_EVENT, "EV_RELEASED");
@@ -113,7 +121,7 @@ void setup() {
     Serial.println(versionText);
 
     pinMode(BLUE_LED, OUTPUT);
-    turnBlueLed(OFF);
+    turnBlueLed(ON);
 
     pinMode(RELAY_REDLED, OUTPUT);
     turnRelay(OFF);
@@ -147,8 +155,10 @@ void loop() {
 
 void turnRelay(int onoff) {
 	digitalWrite(RELAY_REDLED, onoff == ON ? HIGH : LOW);
+	Serial.printf("turnRelay(%d)\n", onoff);
 }
 
 void turnBlueLed(int onoff) {
 	digitalWrite(BLUE_LED, onoff == ON ? LOW : HIGH);
+	Serial.printf("turnBlueLed(%d)\n", onoff);
 }
