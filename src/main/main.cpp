@@ -12,17 +12,53 @@
 
 #include <wifi_creds.h>
 #include <elapsedMillis.h>
+#include <Button2.h>
+
+#define ON 1
+#define OFF 0
 
 WiFiClient client;
 IPAddress mqtt_server(192, 168, 1, 105);
+bool statusLedOn, relayOn = false;
 
-void callback(char *topic, byte *payload, unsigned int length)
+bool inStr(char *str, const char *value)
+{
+  return strcmp(str, value) == 0;
+}
+
+void turnLed(bool on)
+{
+  // digitalWrite(RELAY_AND_LED, on == false);
+  // Serial.printf("turning led %d\n", on);
+}
+
+void turnRelay(bool on)
+{
+  digitalWrite(RELAY_AND_LED, on == false);
+}
+
+void command_topic_cb(char *topic, byte *payload, unsigned int length)
 {
   payload[length] = '\0';
 
   char buff[length];
   sprintf(buff, "%s", payload);
-  Serial.printf("callback, message: %s\n", buff);
+
+  char *command;
+  char *p = (char *)payload;
+
+  while ((command = strtok_r(p, "$", &p)) != NULL)
+  {
+    char *value = strtok_r(p, "$", &p);
+    if (inStr(command, "LED"))
+    {
+      turnLed(inStr(value, "ON"));
+    }
+    else if (inStr(command, "RELAY"))
+    {
+      turnRelay(inStr(value, "ON"));
+    }
+  }
 }
 #define MAX_SUBSCRIPTIONS 6
 
@@ -40,38 +76,53 @@ void callback(char *topic, byte *payload, unsigned int length)
 #define MQTT_RECONNECT_TIME 1000
 
 PubSubClient mqttclient(client);
+#include <string.h>
 
 void subscribeToTopics()
 {
-  mqttclient.subscribe("/device/test-sonoff");
+  mqttclient.subscribe(TOPIC_COMMAND);
   // for (int i = 0; i < mqttSubHead; i++)
   // {
   //   mqttclient.subscribe(subscription[i].topic);
   // }
 }
 
+Button2 button(BUTTON_PIN);
+
 void setup()
 {
   Serial.begin(115200);
   Serial.printf("Booting...\n");
 
+  pinMode(RELAY_AND_LED, OUTPUT);
+  digitalWrite(STATUS_LED, LOW); // default: ON
+
+  pinMode(STATUS_LED, OUTPUT);
+  digitalWrite(STATUS_LED, HIGH); // OFF
+
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
-  pinMode(STATUS_LED, OUTPUT);
-  pinMode(RELAY_AND_LED, OUTPUT);
+  button.setClickHandler([](Button2 &btn) {
+    char buff[40];
+    sprintf(buff, "/device/smartsocket/SMTSKT%02d/event", SMTSKT_NUMBER);
+    mqttclient.publish(buff, "EV_RELEASED");
+    relayOn = !relayOn;
+    digitalWrite(RELAY_AND_LED, relayOn);
+    Serial.printf("relay: %d\n", relayOn);
+  });
 
   while (WiFi.waitForConnectResult() != WL_CONNECTED)
   {
-    digitalWrite(STATUS_LED, LOW);
-    digitalWrite(RELAY_AND_LED, LOW);
     Serial.println("Connection Failed! Rebooting...");
     delay(5000);
     ESP.restart();
   }
 
+  digitalWrite(STATUS_LED, LOW);
+
   mqttclient.setServer(mqtt_server, 1883); // ie "192.168.1.105"
-  mqttclient.setCallback(callback);
+  mqttclient.setCallback(command_topic_cb);
 
   // Port defaults to 3232
   ArduinoOTA.setPort(3232);
@@ -124,20 +175,11 @@ void setup()
   Serial.println(WiFi.localIP());
 }
 
-elapsedMillis sinceFlashedBlue;
-bool ledOn;
+elapsedMillis sincePublishedOnline;
+int onlineCounter = 0;
 
 void loop()
 {
-  if (sinceFlashedBlue > 1000)
-  {
-    sinceFlashedBlue = 0;
-    digitalWrite(STATUS_LED, ledOn);
-    digitalWrite(RELAY_AND_LED, ledOn);
-    ledOn = !ledOn;
-    Serial.printf("ping\n");
-  }
-
   if (!mqttclient.connected())
   {
     if (mqttclient.connect("test host name", "skelstar", "ec11225f87"))
@@ -147,7 +189,21 @@ void loop()
     }
   }
 
+  if (mqttclient.connected() && sincePublishedOnline > 2000)
+  {
+    sincePublishedOnline = 0;
+#define ONLINE_MESSAGE "ONLINE-%02ds"
+    char onlineMsg[11];
+    sprintf(onlineMsg, ONLINE_MESSAGE, onlineCounter);
+
+    mqttclient.publish(TOPIC_ONLINE, onlineMsg);
+    if (onlineCounter < 500)
+      onlineCounter++;
+  }
+
   mqttclient.loop();
+
+  button.loop();
 
   ArduinoOTA.handle();
   delay(1);
