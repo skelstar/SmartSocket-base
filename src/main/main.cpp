@@ -8,9 +8,47 @@
 #endif
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <PubSubClient.h>
 
 #include <wifi_creds.h>
 #include <elapsedMillis.h>
+
+WiFiClient client;
+IPAddress mqtt_server(192, 168, 1, 105);
+
+void callback(char *topic, byte *payload, unsigned int length)
+{
+  payload[length] = '\0';
+
+  char buff[length];
+  sprintf(buff, "%s", payload);
+  Serial.printf("callback, message: %s\n", buff);
+}
+#define MAX_SUBSCRIPTIONS 6
+
+// struct subscriptionType
+// {
+//   char *topic;
+//   SubscriptionCallbackType callback;
+// };
+
+// subscriptionType subscription[MAX_SUBSCRIPTIONS];
+
+#define SUCCESSFUL_CONNECT 1
+#define FAILED_CONNECT 2
+#define WIFI_RECONNECT_TIME 5000
+#define MQTT_RECONNECT_TIME 1000
+
+PubSubClient mqttclient(client);
+
+void subscribeToTopics()
+{
+  mqttclient.subscribe("/device/test-sonoff");
+  // for (int i = 0; i < mqttSubHead; i++)
+  // {
+  //   mqttclient.subscribe(subscription[i].topic);
+  // }
+}
 
 void setup()
 {
@@ -31,6 +69,9 @@ void setup()
     delay(5000);
     ESP.restart();
   }
+
+  mqttclient.setServer(mqtt_server, 1883); // ie "192.168.1.105"
+  mqttclient.setCallback(callback);
 
   // Port defaults to 3232
   ArduinoOTA.setPort(3232);
@@ -96,6 +137,17 @@ void loop()
     ledOn = !ledOn;
     Serial.printf("ping\n");
   }
+
+  if (!mqttclient.connected())
+  {
+    if (mqttclient.connect("test host name", "skelstar", "ec11225f87"))
+    {
+      Serial.println("mqtt connected");
+      subscribeToTopics();
+    }
+  }
+
+  mqttclient.loop();
 
   ArduinoOTA.handle();
   delay(1);

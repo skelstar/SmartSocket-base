@@ -16,5 +16,14 @@
     "titleBar.inactiveBackground": "#3ca8e299",
     "titleBar.inactiveForeground": "#15202b99"
   },
-  "peacock.color": "#3ca8e2"
+  "peacock.color": "#3ca8e2",
+  "files.associations": {
+    "array": "cpp",
+    "deque": "cpp",
+    "list": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "vector": "cpp",
+    "initializer_list": "cpp"
+  }
 }

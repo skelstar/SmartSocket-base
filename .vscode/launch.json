@@ -12,12 +12,12 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "e:/GitHubs/SmartSocket-base/.pio/build/esp32dev.ota/firmware.elf",
-            "projectEnvName": "esp32dev.ota",
-            "toolchainBinDir": "C:/Users/skels/.platformio/packages/toolchain-xtensa32/bin",
+            "executable": "e:/GitHubs/SmartSocket-base/.pio/build/SONOFF-S20.ota/firmware.elf",
+            "projectEnvName": "SONOFF-S20.ota",
+            "toolchainBinDir": "C:/Users/skels/.platformio/packages/toolchain-xtensa/bin",
             "preLaunchTask": {
                 "type": "PlatformIO",
-                "task": "Pre-Debug (esp32dev.ota)"
+                "task": "Pre-Debug (SONOFF-S20.ota)"
             },
             "internalConsoleOptions": "openOnSessionStart"
         },
@@ -25,9 +25,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "e:/GitHubs/SmartSocket-base/.pio/build/esp32dev.ota/firmware.elf",
-            "projectEnvName": "esp32dev.ota",
-            "toolchainBinDir": "C:/Users/skels/.platformio/packages/toolchain-xtensa32/bin",
+            "executable": "e:/GitHubs/SmartSocket-base/.pio/build/SONOFF-S20.ota/firmware.elf",
+            "projectEnvName": "SONOFF-S20.ota",
+            "toolchainBinDir": "C:/Users/skels/.platformio/packages/toolchain-xtensa/bin",
             "internalConsoleOptions": "openOnSessionStart"
         }
     ]
