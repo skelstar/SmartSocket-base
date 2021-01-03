@@ -1,11 +1,11 @@
 
-#if IS_ESP32
-#include <WiFi.h>
-#include <ESPmDNS.h>
-#else
+// #if IS_ESP32
+// #include <WiFi.h>
+// #include <ESPmDNS.h>
+// #else
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
-#endif
+// #endif
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <PubSubClient.h>
@@ -80,11 +80,11 @@ PubSubClient mqttclient(client);
 
 void subscribeToTopics()
 {
-  mqttclient.subscribe(TOPIC_COMMAND);
-  // for (int i = 0; i < mqttSubHead; i++)
-  // {
-  //   mqttclient.subscribe(subscription[i].topic);
-  // }
+  //   mqttclient.subscribe(TOPIC_COMMAND);
+  //   // for (int i = 0; i < mqttSubHead; i++)
+  //   // {
+  //   //   mqttclient.subscribe(subscription[i].topic);
+  //   // }
 }
 
 Button2 button(BUTTON_PIN);
@@ -97,8 +97,8 @@ void setup()
   pinMode(RELAY_AND_LED, OUTPUT);
   digitalWrite(STATUS_LED, LOW); // default: ON
 
-  pinMode(STATUS_LED, OUTPUT);
-  digitalWrite(STATUS_LED, HIGH); // OFF
+  pinMode(BLUE_LED, OUTPUT);
+  digitalWrite(BLUE_LED, LOW); // OFF
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -124,19 +124,8 @@ void setup()
   mqttclient.setServer(mqtt_server, 1883); // ie "192.168.1.105"
   mqttclient.setCallback(command_topic_cb);
 
-  // Port defaults to 3232
   ArduinoOTA.setPort(3232);
-
-  // Hostname defaults to esp3232-[MAC]
-  ArduinoOTA.setHostname("ESP8266 Debug");
-
-  // No authentication by default
-  // ArduinoOTA.setPassword("admin");
-
-  // Password can be set with it's md5 value as well
-
-  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
+  ArduinoOTA.setHostname(HOST_NAME);
 
   ArduinoOTA.onStart([]() {
     String type;
@@ -173,6 +162,8 @@ void setup()
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+
+  Serial.printf("OTA ready\n");
 }
 
 elapsedMillis sincePublishedOnline;
@@ -182,7 +173,8 @@ void loop()
 {
   if (!mqttclient.connected())
   {
-    if (mqttclient.connect("test host name", "skelstar", "ec11225f87"))
+    Serial.printf("mqttclient not connected?\n");
+    if (mqttclient.connect(HOST_NAME, "skelstar", "ec11225f87"))
     {
       Serial.println("mqtt connected");
       subscribeToTopics();
@@ -206,5 +198,6 @@ void loop()
   button.loop();
 
   ArduinoOTA.handle();
-  delay(1);
+
+  delay(200);
 }
