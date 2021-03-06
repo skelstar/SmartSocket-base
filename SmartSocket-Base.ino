@@ -3,8 +3,6 @@
 #include <myPushButton.h>
 #include <ArduinoJson.h> // https://github.com/bblanchon/ArduinoJson
 
-char versionText[] = "SmartSocket-base v1.1";
-
 /* ----------------------------------------------------------- */
 
 #define BUTTON 13
@@ -119,7 +117,6 @@ void setup()
 	Serial.begin(9600);
 	delay(100);
 	Serial.println("Booting");
-	Serial.println(versionText);
 
 	pinMode(BLUE_LED, OUTPUT);
 	setBlueLed(ON);

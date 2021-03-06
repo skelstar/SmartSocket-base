@@ -50,204 +50,203 @@ void turnRelay(bool on)
   digitalWrite(RELAY_AND_LED, on);
   Serial.printf("turning relay %s\n", on ? "ON" : "OFF");
 
-  char buff[40];
-  sprintf(buff, "/device/smartsocket/SMTSKT%02d/event", SMTSKT_NUMBER);
-  mqttclient.publish(
-      buff,
-      relayOn
-          ? "ST_RELAY_ON"
-          : "ST_RELAY_OFF");
-}
-
-void command_topic_cb(char *topic, byte *payload, unsigned int length)
-{
-  payload[length] = '\0';
-
-  char buff[length];
-  sprintf(buff, "%s", payload);
-
-  char *command;
-  char *p = (char *)payload;
-
-  while ((command = strtok_r(p, "$", &p)) != NULL)
+  void command_topic_cb(char *topic, byte *payload, unsigned int length)
   {
-    if (inStr(command, "LED"))
+    payload[length] = '\0';
+
+    char buff[length];
+    sprintf(buff, "%s", payload);
+
+    char *command;
+    char *p = (char *)payload;
+
+    while ((command = strtok_r(p, "$", &p)) != NULL)
     {
-      char *value = strtok_r(p, "$", &p);
-      turnBlueLed(inStr(value, "ON"));
-    }
-    else if (inStr(command, "RELAY"))
-    {
-      char *value = strtok_r(p, "$", &p);
-      turnRelay(inStr(value, "ON"));
-    }
-    else if (inStr(command, "TOGGLE"))
-    {
-      // no value
-      relayOn = !relayOn;
-      turnRelay(relayOn);
+      if (inStr(command, "RELAY"))
+      {
+        char *value = strtok_r(p, "$", &p);
+        if (inStr(value, "ON"))
+        {
+          turnRelay(true);
+          turnBlueLed(false);
+        }
+        else
+        {
+          turnRelay(false);
+          turnBlueLed(true);
+        }
+      }
+      else if (inStr(command, "TOGGLE"))
+      {
+        // no value
+        relayOn = !relayOn;
+        turnRelay(relayOn == true);
+        turnBlueLed(relayOn == false);
+      }
     }
   }
-}
 
-void subscribeToTopics()
-{
-  char topicCommand[40];
-  sprintf(topicCommand, TOPIC_COMMAND_FORMAT, SMTSKT_NUMBER);
-  mqttclient.subscribe(topicCommand);
-}
-
-Button2 button(BUTTON__PIN);
-
-char hostName[40];
-int otaProgress = 0;
-
-void setup()
-{
-  Serial.begin(115200);
-  Serial.printf("Booting...\n");
-
-  pinMode(RELAY_AND_LED, OUTPUT);
-  turnRelay(OFF);
-
-  pinMode(BLUE_LED, OUTPUT);
-  turnBlueLed(ON);
-  delay(500);
-  turnBlueLed(OFF);
-
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-
-  button.setLongClickDetectedHandler([](Button2 &btn) {
-    char buff[40];
-    sprintf(buff, "/device/smartsocket/SMTSKT%02d/event", SMTSKT_NUMBER);
-    digitalWrite(RELAY_AND_LED, LOW);
-    mqttclient.publish(buff, "EV_LONG_PRESS");
-  });
-
-  button.setClickHandler([](Button2 &btn) {
-    char buff[40];
-    sprintf(buff, "/device/smartsocket/SMTSKT%02d/event", SMTSKT_NUMBER);
-    mqttclient.publish(buff, "EV_CLICKED");
-  });
-
-  button.setDoubleClickHandler([](Button2 &btn) {
-    char buff[40];
-    sprintf(buff, "/device/smartsocket/SMTSKT%02d/event", SMTSKT_NUMBER);
-    mqttclient.publish(buff, "EV_DOUBLE_CLICK");
-  });
-
-  while (WiFi.waitForConnectResult() != WL_CONNECTED)
+  void subscribeToTopics()
   {
-    Serial.println("Connection Failed! Rebooting...");
-    delay(5000);
-    ESP.restart();
+    char topicCommand[40];
+    sprintf(topicCommand, TOPIC_COMMAND_FORMAT, SMTSKT_NUMBER);
+    mqttclient.subscribe(topicCommand);
   }
 
-  mqttclient.setServer(mqtt_server, 1883); // ie "192.168.1.105"
-  mqttclient.setCallback(command_topic_cb);
+  Button2 button(BUTTON__PIN);
 
-  ArduinoOTA.setPort(3232);
+  char hostName[40];
+  int otaProgress = 0;
 
-  sprintf(hostName, "SMTSKT%02d", SMTSKT_NUMBER);
-  ArduinoOTA.setHostname(hostName);
+  void setup()
+  {
+    Serial.begin(115200);
+    Serial.printf("Booting...\n");
 
-  ArduinoOTA.onStart([]() {
-    String type;
-    if (ArduinoOTA.getCommand() == U_FLASH)
-      type = "sketch";
-    else // U_SPIFFS
-      type = "filesystem";
-
-    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    Serial.println("Start updating " + type);
-    turnBlueLed(OFF);
+    pinMode(RELAY_AND_LED, OUTPUT);
     turnRelay(OFF);
-  });
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
+
+    pinMode(BLUE_LED, OUTPUT);
+    turnBlueLed(ON);
+    delay(500);
     turnBlueLed(OFF);
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    if (total < otaProgress + 10)
+
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+
+    button.setLongClickDetectedHandler([](Button2 &btn) {
+      char buff[40];
+      sprintf(buff, "/device/smartsocket/SMTSKT%02d/event", SMTSKT_NUMBER);
+      digitalWrite(RELAY_AND_LED, LOW);
+      mqttclient.publish(buff, "EV_LONG_PRESS");
+    });
+
+    button.setClickHandler([](Button2 &btn) {
+      char buff[40];
+      sprintf(buff, "/device/smartsocket/SMTSKT%02d/event", SMTSKT_NUMBER);
+      mqttclient.publish(buff, "EV_CLICKED");
+    });
+
+    button.setDoubleClickHandler([](Button2 &btn) {
+      char buff[40];
+      sprintf(buff, "/device/smartsocket/SMTSKT%02d/event", SMTSKT_NUMBER);
+      mqttclient.publish(buff, "EV_DOUBLE_CLICK");
+    });
+
+    while (WiFi.waitForConnectResult() != WL_CONNECTED)
     {
-      blueLedState = !blueLedState;
-      turnBlueLed(blueLedState);
-      otaProgress += 10;
+      Serial.println("Connection Failed! Rebooting...");
+      delay(5000);
+      ESP.restart();
     }
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR)
-      Serial.println("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR)
-      Serial.println("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR)
-      Serial.println("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR)
-      Serial.println("Receive Failed");
-    else if (error == OTA_END_ERROR)
-      Serial.println("End Failed");
-  });
 
-  ArduinoOTA.begin();
+    mqttclient.setServer(mqtt_server, 1883); // ie "192.168.1.105"
+    mqttclient.setCallback(command_topic_cb);
 
-  Serial.println("Ready");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+    ArduinoOTA.setPort(3232);
 
-  Serial.printf("OTA ready\n");
-}
+    sprintf(hostName, "SMTSKT%02d", SMTSKT_NUMBER);
+    ArduinoOTA.setHostname(hostName);
 
-elapsedMillis sincePublishedOnline;
-int onlineCounter = 0;
+    ArduinoOTA.onStart([]() {
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
 
-void publishDetailsPacket()
-{
-  char topic[40];
-  sprintf(topic, TOPIC_EVENT_FORMAT, SMTSKT_NUMBER);
-  char details[100];
-  sprintf(details, "DETAILS: %s|%s", WiFi.localIP().toString().c_str(), SOFTWARE_VERSION);
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      Serial.println("Start updating " + type);
+      turnBlueLed(OFF);
+      turnRelay(OFF);
+    });
+    ArduinoOTA.onEnd([]() {
+      Serial.println("\nEnd");
+      turnBlueLed(OFF);
+    });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+      if (total < otaProgress + 10)
+      {
+        blueLedState = !blueLedState;
+        turnBlueLed(blueLedState);
+        otaProgress += 10;
+      }
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR)
+        Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR)
+        Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR)
+        Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR)
+        Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR)
+        Serial.println("End Failed");
+    });
 
-  mqttclient.publish(topic, details);
-}
+    ArduinoOTA.begin();
 
-void loop()
-{
-  if (!mqttclient.connected())
-  {
-    turnBlueLed(OFF);
-    Serial.printf("mqttclient not connected?\n");
-    if (mqttclient.connect(hostName, "skelstar", "ec11225f87"))
-    {
-      turnBlueLed(ON);
-      Serial.println("mqtt connected");
-      subscribeToTopics();
-      publishDetailsPacket();
-    }
+    Serial.println("Ready");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+
+    Serial.printf("OTA ready\n");
   }
 
-  if (mqttclient.connected() && sincePublishedOnline > 2000)
+#include <string.h>
+
+  elapsedMillis sincePublishedOnline;
+  int onlineCounter = 0;
+
+  void publishDetailsPacket()
   {
-    sincePublishedOnline = 0;
-#define ONLINE_MESSAGE "ONLINE-%02ds"
-    char onlineMsg[11];
-    sprintf(onlineMsg, ONLINE_MESSAGE, onlineCounter);
+    char topic[40];
+    sprintf(topic, TOPIC_EVENT_FORMAT, SMTSKT_NUMBER);
+    char details[100];
+    sprintf(details, "SMTSKT%d | %s | %s",
+            SMTSKT_NUMBER,
+            WiFi.localIP().toString().c_str(),
+            SOFTWARE_VERSION);
 
-    char topicOnline[40];
-    sprintf(topicOnline, TOPIC_ONLINE_FORMAT, SMTSKT_NUMBER);
-
-    mqttclient.publish(topicOnline, onlineMsg);
-    if (onlineCounter < 500)
-      onlineCounter++;
+    mqttclient.publish(topic, details);
   }
 
-  mqttclient.loop();
+  void loop()
+  {
+    if (!mqttclient.connected())
+    {
+      turnBlueLed(OFF);
+      Serial.printf("mqttclient not connected?\n");
+      if (mqttclient.connect(hostName, "skelstar", "ec11225f87"))
+      {
+        turnBlueLed(ON);
+        Serial.println("mqtt connected");
+        subscribeToTopics();
+        publishDetailsPacket();
+      }
+    }
 
-  button.loop();
+    if (mqttclient.connected() && sincePublishedOnline > 2000)
+    {
+      sincePublishedOnline = 0;
+#define ONLINE_MESSAGE "ONLINE: %s"
+      char onlineMsg[20];
+      sprintf(onlineMsg, ONLINE_MESSAGE, SOFTWARE_VERSION);
 
-  ArduinoOTA.handle();
+      char topicOnline[40];
+      sprintf(topicOnline, TOPIC_ONLINE_FORMAT, SMTSKT_NUMBER);
 
-  delay(10);
-}
+      mqttclient.publish(topicOnline, onlineMsg);
+    }
+
+    mqttclient.loop();
+
+    button.loop();
+
+    ArduinoOTA.handle();
+
+    delay(10);
+  }
